@@ -8,6 +8,8 @@ import com.ecommerce.order.dto.UserResponseDto;
 import com.ecommerce.order.model.CartItem;
 import com.ecommerce.order.repository.CartItemRepository;
 import com.ecommerce.order.service.CartService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +31,13 @@ public class CartServiceImpl implements CartService {
 
     private final UserServiceClient userServiceClient;
 
+    private int attempts = 0;
+
+    @CircuitBreaker(name="productService",fallbackMethod = "addToCartFallBack")
+    @Retry(name="retryBreaker",fallbackMethod = "addToCartFallBack")
     @Override
     public boolean addToCart(String userId, CartItemRequestDto cartItemRequestDto) {
+        System.out.println("Attempt number: " + (++attempts));
         ProductResponseDto productResponseDto =  productServiceClient.getProductDetails(cartItemRequestDto.getProductId());
         if(productResponseDto == null)
             return false;
@@ -56,6 +63,12 @@ public class CartServiceImpl implements CartService {
             cartRepository.save(cartItem);
         }
         return true;
+    }
+
+    @Override
+    public boolean addToCartFallBack(String userId, CartItemRequestDto cartItemRequestDto,Exception exception){
+        System.out.println("Falling back to add to cart");
+        return false;
     }
 
     @Override
