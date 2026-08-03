@@ -13,4 +13,6 @@ public interface CartService {
     List<CartItem> getCart(String userId);
 
     void clearCart(String userId);
+
+    public boolean addToCartFallBack(String userId, CartItemRequestDto cartItemRequestDto,Exception exception);
 }
